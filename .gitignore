@@ -1,0 +1,22 @@
+# User profile data & sensitive runtime files
+profiles.json
+sessions.json
+account.dat
+install-paths.json
+launcher-routing.ini
+window-state.json
+splitscreen-settings.json
+studio.log
+*.log
+
+# Build outputs
+build/
+bin/
+obj/
+*.user
+*.suo
+
+# Backup and temp files
+*.previous
+*.tmp
+*.bak
