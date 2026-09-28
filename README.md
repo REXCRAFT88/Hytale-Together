@@ -12,11 +12,11 @@
 
 Download the ready-to-run package:
 
-📦 **[Download Hytale Together v0.3.1 Preview (Windows x64 .ZIP)](https://github.com/REXCRAFT88/Hytale-Together/raw/main/releases/HytaleTogether-0.3.1-preview-win-x64.zip)**  
+📦 **[Download Hytale Together v0.3.1 Preview (Windows x64 .ZIP)](https://github.com/REXCRAFT88/Hytale-Together/releases/download/v0.3.1-preview/HytaleTogether-0.3.1-preview-win-x64.zip)**  
 *(SHA-256 Checksum: `releases/HytaleTogether-0.3.1-preview-win-x64.zip.sha256`)*
 
 Source archive:
-📁 **[Download Source Package (.ZIP)](https://github.com/REXCRAFT88/Hytale-Together/raw/main/releases/HytaleTogether-0.3.1-preview-source.zip)**
+📁 **[Download Source Package (.ZIP)](https://github.com/REXCRAFT88/Hytale-Together/releases/download/v0.3.1-preview/HytaleTogether-0.3.1-preview-source.zip)**
 
 ---
 
