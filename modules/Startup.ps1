@@ -14,7 +14,7 @@ function Write-StartupFailure($Record,[string]$Stage){
     try {
         [void][IO.Directory]::CreateDirectory($folder)
         $file=Join-Path $folder ('startup-'+[DateTime]::Now.ToString('yyyyMMdd-HHmmss-fff')+'.log')
-        $details="Hytale Together 0.3.2-preview`r`n$([DateTime]::UtcNow.ToString('o'))`r`n$message`r`nPowerShell: $($PSVersionTable.PSVersion); 64-bit: $([Environment]::Is64BitProcess)`r`n$($Record.ScriptStackTrace)`r`n$($Record.Exception.ToString())"
+        $details="Hytale Together 0.3.3-preview`r`n$([DateTime]::UtcNow.ToString('o'))`r`n$message`r`nPowerShell: $($PSVersionTable.PSVersion); 64-bit: $([Environment]::Is64BitProcess)`r`n$($Record.ScriptStackTrace)`r`n$($Record.Exception.ToString())"
         [IO.File]::WriteAllText($file,$details)
         $message+="`r`n`r`nDiagnostic log: $file"
     } catch { $message+="`r`n`r`nCould not write a diagnostic log: $($_.Exception.Message)" }

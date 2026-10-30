@@ -1,4 +1,10 @@
-# Hytale Together — 0.3.2 preview
+﻿# Hytale Together — 0.3.3 preview
+
+This update bundles the official SDL 3.2.26 Windows x64 controller runtime. Earlier packages copied SDL from the installed game; some game builds omit joystick support, preventing controller initialization. The helper now uses its own bundled runtime. Game files are not replaced.
+
+Download the Windows ZIP from the repository releases folder, extract the whole folder, and run Hytale Together.exe. Keep SDL3.dll beside the executable. To update an existing installation, close the helper before replacing application files; keep your profiles.json and settings.
+
+Controller discovery has been checked with the bundled runtime on the development PC. The reported affected PC still needs verification, including controller input inside both games.
 
 Unofficial local split-screen helper for 1–4 separately authenticated Hytale players on Windows 10/11 x64. Each player keeps private saves/settings and shares the installed game files. This is a community preview, not an official Hytale feature or a guaranteed stable release.
 
@@ -6,7 +12,7 @@ Unofficial local split-screen helper for 1–4 separately authenticated Hytale p
 
 1. Install Hytale and sign in through the official launcher. This package contains no game, accounts, or authentication credentials.
 2. Extract the ZIP into a writable folder (for example Documents). Do not run it inside the ZIP or put it under Program Files.
-3. Double-click **Hytale Together.exe**. Setup finds the standard game install or asks you to locate `HytaleClient.exe`. It uses SDL from your installed game; it does not modify game binaries.
+3. Double-click **Hytale Together.exe**. Setup finds the standard game install or asks you to locate `HytaleClient.exe`. It uses the bundled official SDL controller runtime.
 4. Expand **Accounts & controllers**. Open the launcher, start an account to its main menu, then choose **Add running accounts**. Repeat for each account. Account preparation copies existing saves/mods/settings once and may take time for large worlds.
 5. Select one controller icon per player. Icons are numbered; hover to see the exact device. **Assign by button** listens for the bottom face button: A on Xbox, Cross on PlayStation, B on a Nintendo-layout pad. Use one device representation per physical controller; emulator mirrors can produce two answers. The tool never disables devices system-wide.
 6. Close the initial game clients. Select a monitor icon and layout, then **Start session**. Leave **Auto launch accounts (preview)** checked to select saved accounts and press Play in sequence. Keep the official launcher visible while it selects accounts. If login, an update, a branch mismatch, or a covered control needs attention, complete that step manually. Uncheck Auto launch for the previous manual workflow. Windows are arranged and controllers attached when every selected account is ready.
@@ -33,7 +39,7 @@ Same-PC friend invites can reject local candidates and fall back to an unreliabl
 
 USB/Bluetooth reconnection may change device identity. Re-select the pad if its icon is missing or disconnected. Mirrored physical/virtual devices can appear separately; select only one. RGB, vibration, and touchpad controls are disabled when unsupported. Guide/PS or Share/Back-to-Escape mapping depends on what the driver exposes; Steam or another app may reserve Guide.
 
-This adapter is deliberately restricted to **SDL 3.2.26**. Other SDL versions need an adapter update; bypassing this check is unsupported. Four-player layout/configuration is tested, but a live four-account/four-controller session is not yet verified. Multi-client gameplay can require substantial RAM/VRAM. This release retains the existing native input implementation; it does not claim to resolve every previously observed client crash.
+The bundled helper runtime is **SDL 3.2.26**. Other SDL versions need an adapter update; bypassing this check is unsupported. Four-player layout/configuration is tested, but a live four-account/four-controller session is not yet verified. Multi-client gameplay can require substantial RAM/VRAM. This release retains the existing native input implementation; it does not claim to resolve every previously observed client crash.
 
 ## Data and troubleshooting
 

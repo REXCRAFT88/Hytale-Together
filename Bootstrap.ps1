@@ -16,13 +16,10 @@ try{
     $candidates=@($config.Client,(Join-Path $env:APPDATA 'Hytale\install\release\package\game\latest\Client\HytaleClient.exe'),(Join-Path $env:APPDATA 'Hytale\install\pre-release\package\game\latest\Client\HytaleClient.exe'))
     $client=$candidates | Where-Object {$_ -and (Test-Path -LiteralPath $_)} | Select-Object -First 1
     if(!$client){$client=Select-InstalledExecutable 'HytaleClient.exe' 'Locate your installed Hytale game (Client folder)'}
-    $sdl=Join-Path (Split-Path $client) 'SDL3.dll'
-    if(!(Test-Path -LiteralPath $sdl)){throw 'The selected installation has no SDL3.dll next to HytaleClient.exe.'}
-    $stage='Saving installation selection'
-    $config.Client=$client;Save-InstallPaths $config
-    $stage='Copying the game SDL library'
+    $stage='Loading bundled controller runtime'
     $destination=Join-Path $PSScriptRoot 'SDL3.dll'
-    if(!(Test-Path $destination) -or (Get-FileHash $sdl).Hash -ne (Get-FileHash $destination).Hash){Copy-Item -LiteralPath $sdl -Destination $destination -Force}
+    if(!(Test-Path -LiteralPath $destination)){throw 'Bundled SDL3.dll is missing. Extract the complete Windows ZIP again.'}
+    $config.Client=$client;Save-InstallPaths $config
     $env:PATH=$PSScriptRoot+';'+$env:PATH
     $stage='Loading and checking the game SDL library'
     Import-InstalledSDL $destination
