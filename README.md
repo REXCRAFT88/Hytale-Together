@@ -1,4 +1,4 @@
-﻿# Hytale Together — 0.3.3 preview
+﻿# Hytale Together — 0.3.4 preview
 
 This update bundles the official SDL 3.2.26 Windows x64 controller runtime. Earlier packages copied SDL from the installed game; some game builds omit joystick support, preventing controller initialization. The helper now uses its own bundled runtime. Game files are not replaced.
 
@@ -63,3 +63,6 @@ Close all Hytale clients. In Hytale Together choose `release` or `pre-release` i
 
 If startup fails, the dialog now identifies the failing stage. Diagnostic logs are saved in `%LOCALAPPDATA%/HytaleTogether/Diagnostics`. Only a failed write check recommends another writable folder. SDL versions other than 3.2.26 still require an adapter update; this release does not bypass that compatibility check.
 
+
+## Controller diagnostics
+If startup or controller detection fails, share runtime.log, controllers.log and the latest startup log from `%LOCALAPPDATA%/HytaleTogether/Diagnostics`. Logs include the actual SDL path and version, DLL hash, subsystem initialization results, device counts and SDL errors. Logs stay on your PC and rotate at 2 MB. Paths may contain your Windows username; review before sharing. Controller button presses and account tokens are not recorded.

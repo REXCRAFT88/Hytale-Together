@@ -7,7 +7,7 @@ using System.Windows.Forms;
 [assembly: AssemblyTitle("Hytale Together")]
 [assembly: AssemblyProduct("Hytale Together")]
 [assembly: AssemblyDescription("Unofficial Hytale split-screen launcher")]
-[assembly: AssemblyVersion("0.3.3.0")]
+[assembly: AssemblyVersion("0.3.4.0")]
 internal static class Launcher
 {
     [DllImport("shell32.dll", SetLastError = true)]

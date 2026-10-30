@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -21,6 +21,8 @@ public static class DualSenseManager {
     [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] static extern IntPtr SDL_GetGamepadName(IntPtr pad);
     [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] static extern ushort SDL_GetGamepadVendor(IntPtr pad);
     [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] static extern IntPtr SDL_GetError();
+    [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] static extern int SDL_GetVersion();
+    [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] static extern uint SDL_WasInit(uint flags);
     [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] static extern void SDL_Quit();
     [DllImport(Library, CallingConvention=CallingConvention.Cdecl)]
     [return: MarshalAs(UnmanagedType.I1)] static extern bool SDL_GamepadConnected(IntPtr pad);
@@ -49,6 +51,17 @@ public static class DualSenseManager {
     public static int OpenHandleCount { get { return pads.Count; } }
     public static int OpenCount { get; private set; }
     public static int CloseCount { get; private set; }
+    static string logPath;
+    static string lastDiscoveryLog="";
+    public static string LogPath { get { return logPath ?? ""; } }
+    static void Log(string message) {
+        try {
+            if(String.IsNullOrEmpty(logPath)) logPath=System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"HytaleTogether","Diagnostics","controllers.log");
+            var dir=System.IO.Path.GetDirectoryName(logPath); if(!System.IO.Directory.Exists(dir))System.IO.Directory.CreateDirectory(dir);
+            if(System.IO.File.Exists(logPath) && new System.IO.FileInfo(logPath).Length>2097152) { System.IO.File.Copy(logPath,logPath+".previous",true); System.IO.File.WriteAllText(logPath,""); }
+            System.IO.File.AppendAllText(logPath,DateTime.UtcNow.ToString("o")+" "+message+Environment.NewLine,Encoding.UTF8);
+        } catch {}
+    }
 
     static string Utf8(IntPtr value) {
         if(value == IntPtr.Zero) return "";
@@ -68,10 +81,16 @@ public static class DualSenseManager {
     }
     public static void Initialize() {
         if(initialized) return;
+        Log("SDL initialize requested; managerAssembly="+typeof(DualSenseManager).Assembly.Location+"; process64="+Environment.Is64BitProcess);
         SDL_SetHint("SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS","1");
         SDL_SetHint("SDL_JOYSTICK_ENHANCED_REPORTS","1");
-        if(!SDL_Init(0x2000)) throw new InvalidOperationException("Controller initialization: "+Utf8(SDL_GetError()));
+        if(!SDL_Init(0x2000)) {
+            string error=Utf8(SDL_GetError());
+            Log("SDL_Init(SDL_INIT_GAMEPAD) FAILED; version="+SDL_GetVersion()+"; error="+error);
+            throw new InvalidOperationException("Controller initialization failed. SDL version="+SDL_GetVersion()+"; "+error+". Details: "+LogPath);
+        }
         initialized=true;
+        Log("SDL initialized; version="+SDL_GetVersion()+"; joystickFlags="+SDL_WasInit(0x200)+"; gamepadFlags="+SDL_WasInit(0x2000));
     }
     public static void Pump() {
         Initialize(); SDL_PumpEvents(); SDL_FlushEvents(0,0xffff);
@@ -79,7 +98,8 @@ public static class DualSenseManager {
     public static void OpenAll() {
         Pump();
         int count; IntPtr list=SDL_GetGamepads(out count);
-        if(list==IntPtr.Zero) throw new InvalidOperationException("Controller discovery: "+Utf8(SDL_GetError()));
+        if(list==IntPtr.Zero) { string error=Utf8(SDL_GetError());Log("SDL_GetGamepads FAILED; error="+error);throw new InvalidOperationException("Controller discovery failed: "+error+". Details: "+LogPath); }
+        string discovery=count+" gamepads detected";
         var present=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         try {
             for(int i=0;i<count;++i) {
@@ -87,6 +107,7 @@ public static class DualSenseManager {
                 string path=Utf8(SDL_GetJoystickPathForID(instance));
                 if(path.Length==0) path=Utf8(SDL_GetGamepadPathForID(instance));
                 string id=ComputeId(path); if(id.Length==0) continue;
+                discovery += "; deviceId="+id;
                 present.Add(id); Device old;
                 if(pads.TryGetValue(id,out old)) {
                     if(old.InstanceId==instance && SDL_GamepadConnected(old.Handle)) continue;
@@ -107,6 +128,7 @@ public static class DualSenseManager {
                     SDL_CloseGamepad(pads[id].Handle); ++CloseCount; pads.Remove(id);
                 }
             }
+            if(discovery!=lastDiscoveryLog){Log(discovery);lastDiscoveryLog=discovery;}
         } finally { SDL_free(list); }
     }
     public static Device[] GetDevices() {
@@ -167,3 +189,4 @@ public static class DualSenseManager {
         CloseAll(); colors.Clear(); SDL_Quit(); initialized=false;
     }
 }
+

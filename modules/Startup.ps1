@@ -9,12 +9,13 @@
 function Write-StartupFailure($Record,[string]$Stage){
     $cause=$Record.Exception
     while($cause.InnerException){$cause=$cause.InnerException}
+    Write-RuntimeDiagnostic ("Startup failure; stage="+$Stage+"; "+$Record.Exception.ToString())
     $message="Startup failed during: $Stage`r`n`r`n$($cause.Message)"
     $folder=Join-Path $env:LOCALAPPDATA 'HytaleTogether/Diagnostics'
     try {
         [void][IO.Directory]::CreateDirectory($folder)
         $file=Join-Path $folder ('startup-'+[DateTime]::Now.ToString('yyyyMMdd-HHmmss-fff')+'.log')
-        $details="Hytale Together 0.3.3-preview`r`n$([DateTime]::UtcNow.ToString('o'))`r`n$message`r`nPowerShell: $($PSVersionTable.PSVersion); 64-bit: $([Environment]::Is64BitProcess)`r`n$($Record.ScriptStackTrace)`r`n$($Record.Exception.ToString())"
+        $details="Hytale Together 0.3.4-preview`r`n$([DateTime]::UtcNow.ToString('o'))`r`n$message`r`nPowerShell: $($PSVersionTable.PSVersion); 64-bit: $([Environment]::Is64BitProcess)`r`n$($Record.ScriptStackTrace)`r`n$($Record.Exception.ToString())"
         [IO.File]::WriteAllText($file,$details)
         $message+="`r`n`r`nDiagnostic log: $file"
     } catch { $message+="`r`n`r`nCould not write a diagnostic log: $($_.Exception.Message)" }
@@ -42,9 +43,22 @@ namespace HytaleTogether {
 }
 '@
     }
+    Write-RuntimeDiagnostic ('Loading SDL; expected='+$Path+'; sha256='+ (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash+'; OS='+[Environment]::OSVersion+'; PowerShell='+$PSVersionTable.PSVersion+'; process64='+[Environment]::Is64BitProcess)
     $version=[HytaleTogether.NativeLoader]::Load([IO.Path]::GetFullPath($Path))
+    $loaded=[Diagnostics.Process]::GetCurrentProcess().Modules | Where-Object ModuleName -eq 'SDL3.dll'
+    Write-RuntimeDiagnostic ('SDL version='+$version+'; loaded='+($loaded.FileName -join ', '))
     if($version -ne 3002026){
         $display='{0}.{1}.{2}' -f [math]::Floor($version/1000000),([math]::Floor($version/1000)%1000),($version%1000)
         throw "Unsupported game SDL version: $display. This adapter requires SDL 3.2.26. A compatible adapter update is needed; moving or extracting the folder again will not fix this. No game files were changed."
     }
+}
+
+function Write-RuntimeDiagnostic([string]$Message){
+    try {
+        $folder=Join-Path $env:LOCALAPPDATA 'HytaleTogether/Diagnostics'
+        [void][IO.Directory]::CreateDirectory($folder)
+        $file=Join-Path $folder 'runtime.log'
+        if((Test-Path $file) -and (Get-Item $file).Length -gt 2097152){Move-Item $file ($file+'.previous') -Force}
+        Add-Content -LiteralPath $file -Value ([DateTime]::UtcNow.ToString('o')+' '+$Message)
+    } catch {}
 }
