@@ -1,4 +1,4 @@
-if(-not ('TaskbarIconHelper' -as [type])){
+﻿if(-not ('TaskbarIconHelper' -as [type])){
 Add-Type @'
 using System;
 using System.IO;
@@ -199,6 +199,7 @@ if(Test-Path $settingsPath){$settings=Get-Content -Raw $settingsPath | ConvertFr
      <Path Width="14" Height="14" Stretch="Uniform" Fill="#EF4444" Data="M 2 2 H 14 V 14 H 2 Z"/>
     </Button>
    </WrapPanel>
+   <WrapPanel Margin="4,0,4,6"><TextBlock Text="Game branch" VerticalAlignment="Center" Margin="4"/><ComboBox x:Name="GameBranch" Width="135"/><Button x:Name="SwitchBranch" Content="Switch branch" ToolTip="Close games first. Keeps each branch in a separate save folder."/></WrapPanel>
    <Expander x:Name="Setup" Header="Setup &amp; more" Foreground="#E6EDF3" Margin="4,2,4,10">
     <StackPanel>
      <TextBlock Text="First time: open the official launcher, launch each account to its main menu, then add running accounts. Close those game windows before starting your first session." TextWrapping="Wrap" Foreground="#9CA3AF" Margin="4,10"/>
@@ -273,7 +274,7 @@ if(Test-Path $iconPath){
         [TaskbarIconHelper]::ApplyWindowIcon($helper.Handle, $iconPath)
     })
 }
-foreach($name in @('Auto','ManualStart','Launcher','Discover','Scan','Monitor','LayoutSelect','Full','Resize','Ratio16x9','Save','Attach','Pause','Resume','Stop','Cancel','Status','Log','Players','LocalWorlds','LocalAddress','CopyLocal','Setup','MonitorIcons','LayoutPreview','PreviousLayout','NextLayout','LayoutLabel','SplitRatio','ApplyLayout')){Set-Variable -Name ('ui'+$name) -Value $window.FindName($name) -Scope Script}
+foreach($name in @('GameBranch','SwitchBranch','Auto','ManualStart','Launcher','Discover','Scan','Monitor','LayoutSelect','Full','Resize','Ratio16x9','Save','Attach','Pause','Resume','Stop','Cancel','Status','Log','Players','LocalWorlds','LocalAddress','CopyLocal','Setup','MonitorIcons','LayoutPreview','PreviousLayout','NextLayout','LayoutLabel','SplitRatio','ApplyLayout')){Set-Variable -Name ('ui'+$name) -Value $window.FindName($name) -Scope Script}
 function Write-Panel([string]$Message){
     $uiStatus.Text=$Message
     $uiLog.AppendText(('[{0:HH:mm:ss}] {1}' -f [DateTime]::Now,$Message)+"`r`n");$uiLog.ScrollToEnd()
@@ -527,7 +528,7 @@ function Build-PlayerRows {
 
         $assignBtn.Tag=$row
         $assignBtn.Add_Click({param($sender,$event) Invoke-Panel {
-            if($script:job -or $script:launch.Phase -ne 'Idle'){throw 'Cancel the current operation before assigning.'}
+            if($script:job -or $script:launch.Phase -notin @('Idle','NeedsAttention')){throw 'Cancel the current operation before assigning.'}
             $targetRow=$sender.Tag
             [DualSenseManager]::OpenAll()
             $script:binding=[pscustomobject]@{
@@ -564,6 +565,7 @@ function Save-PlayerRows([switch]$RequireControllers){
 function Start-PanelJob([string]$ActionName){
     if($script:job -or $script:launch.HookJob){throw 'Wait for the current operation to finish.'}
     $arguments='-NoProfile -ExecutionPolicy Bypass -File '+[HytaleLaunchArgs]::Quote((Join-Path $script:BundleRoot 'SplitScreen.ps1'))+' -Action '+$ActionName+' -MonitorIndex '+$uiMonitor.SelectedIndex+' -Layout '+$uiLayoutSelect.SelectedItem+' -WindowMode '+$(if($uiFull.IsChecked){'FullScreen'}else{'Windowed'})
+    if($ActionName -eq 'SwitchBranch'){$arguments+=' -GameBranch '+[string]$uiGameBranch.SelectedItem}
     if($uiResize.IsChecked){$arguments+=' -ManualResize'}
     $script:job=[HytaleAssignmentProcess]::new((Join-Path $PSHOME 'powershell.exe'),$arguments);$script:jobAction=$ActionName
     Write-Panel ($ActionName+' started...')
@@ -600,6 +602,9 @@ $uiCopyLocal.Add_Click({Invoke-Panel {
     [Windows.Clipboard]::SetText([string]$uiLocalAddress.SelectedValue)
     Write-Panel ('Copied '+$uiLocalAddress.SelectedValue+'. On the other client use Servers > Direct Connect, paste, and join.')
 }})
+[void]$uiGameBranch.Items.Add('release');[void]$uiGameBranch.Items.Add('pre-release')
+$uiGameBranch.SelectedItem=if($script:profiles.Count){$script:profiles[0].Branch}else{'release'}
+$uiSwitchBranch.Add_Click({Invoke-Panel {Save-PlayerRows;Stop-LauncherAutomation;$script:launch.Phase='Idle';Start-PanelJob SwitchBranch}})
 $uiDiscover.Add_Click({Invoke-Panel {Start-PanelJob Discover}})
 $uiLauncher.Add_Click({Invoke-Panel {Open-OfficialLauncher;Write-Panel 'Official launcher requested. Auto setup must prepare routing before Play.'}})
 $uiAuto.Add_Click({Invoke-Panel {
@@ -635,8 +640,8 @@ $script:nextSlow=[DateTime]::MinValue
 $script:nextAuto=[DateTime]::MinValue
 function Update-Studio {
  try {
-    $busy=$null -ne $script:job -or $null -ne $script:binding -or $script:launch.Phase -ne 'Idle' -or $null -ne $script:launch.HookJob
-    foreach($control in @($uiLayoutPreview,$uiNextLayout,$uiPreviousLayout,$uiSplitRatio,$uiApplyLayout,$uiPlayers,$uiAuto,$uiManualStart,$uiSave,$uiAttach,$uiScan,$uiDiscover,$uiLocalWorlds)){if($control){$control.IsEnabled=!$busy}}
+    $busy=$null -ne $script:job -or $null -ne $script:binding -or $script:launch.Phase -notin @('Idle','NeedsAttention') -or $null -ne $script:launch.HookJob
+    foreach($control in @($uiSwitchBranch,$uiGameBranch,$uiLayoutPreview,$uiNextLayout,$uiPreviousLayout,$uiSplitRatio,$uiApplyLayout,$uiPlayers,$uiAuto,$uiManualStart,$uiSave,$uiAttach,$uiScan,$uiDiscover,$uiLocalWorlds)){if($control){$control.IsEnabled=!$busy}}
     [DualSenseManager]::Pump()
     if($script:binding){
         $b=$script:binding
@@ -700,6 +705,7 @@ function Update-Studio {
             foreach($world in $worlds){if($world){[void]$uiLocalAddress.Items.Add($world)}}
             if($uiLocalAddress.Items.Count){$uiLocalAddress.SelectedIndex=0}
         }
+        elseif($completed -eq 'SwitchBranch'){$script:profiles=@(Read-Profiles | Sort-Object ScreenSlot);Build-PlayerRows;Write-Panel ('Players switched to '+$uiGameBranch.SelectedItem+'. Select the same branch in official launcher Settings before starting.')}
         elseif($completed -eq 'Discover'){$script:profiles=@(Read-Profiles | Sort-Object ScreenSlot);Build-PlayerRows;Write-Panel 'Account catalog refreshed.'}
         elseif($completed -eq 'Arrange'){Write-Panel 'Screen layout applied.'}
         elseif($completed -eq 'Attach'){$script:launch.Phase='Idle';Write-Panel 'Adapters attached and windows arranged. Move each controller to verify input on its card.'}
@@ -736,7 +742,7 @@ function Update-Studio {
         foreach($launcher in $launchers){
             $pidStr=[string]$launcher.Id
             $attempts=if($script:launch.PSObject.Properties['HookAttempts'] -and $script:launch.HookAttempts.ContainsKey($pidStr)){$script:launch.HookAttempts[$pidStr]}else{0}
-            if(!$script:launch.Hooked.ContainsKey($pidStr) -or ($script:launch.Hooked[$pidStr] -ne $true -and $attempts -lt 8)){
+            if(!$script:launch.AutoJob -and (!$script:launch.Hooked.ContainsKey($pidStr) -or ($script:launch.Hooked[$pidStr] -ne $true -and $attempts -lt 8))){
                 $script:launch.HookPid=$launcher.Id
                 $script:launch.HookJob=[HytaleAssignmentProcess]::new((Join-Path $script:BundleRoot 'HytaleLaunchHost.exe'),$pidStr)
                 break
@@ -764,10 +770,12 @@ function Update-Studio {
             if($ready){
                 Stop-LauncherAutomation;$script:launch.Phase='Attaching';Start-PanelJob Attach
             }elseif($mismatchedBranch.Count){
+                Stop-LauncherAutomation;$script:autoLaunch=$false;$script:launch.Phase='NeedsAttention'
                 $item=$mismatchedBranch[0]
                 $message="$($item.Name) is running on '$($item.Running)', but profile expects '$($item.Expected)'. Close the client and select '$($item.Expected)' in launcher."
                 if($message -ne $script:launch.LastMessage){$script:launch.LastMessage=$message;Write-Panel $message}
             }elseif($unrouted.Count){
+                Stop-LauncherAutomation;$script:autoLaunch=$false;$script:launch.Phase='NeedsAttention'
                 $item=$unrouted[0]
                 $message="$($item.Name) is using the shared folder. Close that client, click Auto, wait for routing ready, then click Play."
                 if($message -ne $script:launch.LastMessage){$script:launch.LastMessage=$message;Write-Panel $message}
@@ -802,13 +810,14 @@ function Update-Studio {
                 # Check if the next player needs an official launcher opened
                 $target=$missing[0]
                 $startingUp=($allLaunchers.Count -gt 0 -and $launchers.Count -eq 0)
-                if(!$script:launch.Requested.ContainsKey($target.AccountId) -and !$unusedLaunchers.Count -and !$startingUp -and [DateTime]::UtcNow -gt $script:launch.LastOpen.AddSeconds(3)){
+                if($script:autoLaunch -and !$script:launch.AutoJob -and !$script:launch.Requested.ContainsKey($target.AccountId) -and !$unusedLaunchers.Count -and !$startingUp -and [DateTime]::UtcNow -gt $script:launch.LastOpen.AddSeconds(3)){
                     if($script:launch.OpenAttempts -ge 6){throw 'The official launcher did not remain open. Open it manually, then retry Auto.'}
                     $script:launch.LastOpen=[DateTime]::UtcNow;$script:launch.OpenAttempts++
                     Write-Panel "Opening official launcher for $($target.Name)..."
                     Open-OfficialLauncher
                 }
                 Update-LauncherAutomation $missing $launchers
+                if($script:launch.Phase -eq 'NeedsAttention'){return}
                 $message='Waiting for: '+(($missing | ForEach-Object {$_.Name}) -join ', ')+'. In the official launcher, select that account and click Play. Reopen the launcher if it closed.'
                 if($message -ne $script:launch.LastMessage){$script:launch.LastMessage=$message;Write-Panel $message}
                 if([DateTime]::UtcNow -gt $script:launch.Started.AddMinutes(10)){Stop-LauncherAutomation;$script:launch.Phase='Idle';Write-Panel 'Auto timed out after 10 minutes. Click Auto to retry.'}

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -63,7 +63,8 @@ public static class LauncherAutomation {
   if(!PostMessage(target,0x201,new IntPtr(1),xy)||!PostMessage(target,0x202,IntPtr.Zero,xy))throw new Exception("Launcher input failed.");
  }
  public static string Step(int pid,string targetName,string branch,string[] knownNames,bool allowPlay){
-  var process=Process.GetProcessById(pid);
+  Process process;
+  try { process=Process.GetProcessById(pid); } catch(ArgumentException) { return "WAIT"; }
   if(process.ProcessName!="hytale-launcher")throw new Exception("Unexpected launcher process.");
   var hwnd=process.MainWindowHandle;if(hwnd==IntPtr.Zero)return "WAIT";
   BringToFront(hwnd);
@@ -87,7 +88,7 @@ public static class LauncherAutomation {
    .Select(e=>e.Current.Name).FirstOrDefault(n=>n.StartsWith("Version:",StringComparison.OrdinalIgnoreCase));
   if(text==null)return "WAIT";
   bool prerelease=text.IndexOf("pre",StringComparison.OrdinalIgnoreCase)>=0;
-  if(prerelease!=(branch=="pre-release"))throw new Exception("Select the saved profile's game branch in launcher Settings before continuing.");
+  if(prerelease!=(branch=="pre-release"))throw new Exception("Branch mismatch for " + targetName + ": saved profile requires " + branch + ", launcher shows " + text + ". In official launcher Settings, select " + branch + ", then click Start session again. Saves have not been moved.");
   if(!allowPlay)return "ACCOUNT_READY";
   var play=root.FindFirst(TreeScope.Descendants,new AndCondition(new PropertyCondition(AutomationElement.ControlTypeProperty,ControlType.Button),new PropertyCondition(AutomationElement.NameProperty,"PLAY")));
   if(play==null || !play.Current.IsEnabled)return "WAIT";

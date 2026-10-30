@@ -1,4 +1,4 @@
-# Timer-owned state, never PowerShell script blocks on unmanaged/ThreadPool callbacks.
+﻿# Timer-owned state, never PowerShell script blocks on unmanaged/ThreadPool callbacks.
 function Open-OfficialLauncher {
     $path=Resolve-OfficialLauncher
     Start-Process explorer.exe -ArgumentList ('"'+$path+'"') | Out-Null
@@ -15,15 +15,17 @@ function Stop-LauncherAutomation {
 }
 function Update-LauncherAutomation($Missing,$Launchers){
     $autoEnabled=$true
-    if(Get-Variable script:autoLaunch -ErrorAction SilentlyContinue){if($false -eq $script:autoLaunch){$autoEnabled=$false}}
+    if(Get-Variable -Name autoLaunch -Scope Script -ErrorAction SilentlyContinue){if($false -eq $script:autoLaunch){$autoEnabled=$false}}
     if((Get-Variable uiAutoLaunch -ErrorAction SilentlyContinue) -and $uiAutoLaunch){if(!$uiAutoLaunch.IsChecked){$autoEnabled=$false}}
-    if(!$autoEnabled -or !$Missing.Count){return}
+    if(!$autoEnabled){Stop-LauncherAutomation;return}
+    if(!$Missing.Count){return}
     $state=$script:launch
     if($state.AutoJob){
         if(!$state.AutoJob.IsCompleted){
             if([DateTime]::UtcNow -gt $state.AutoStarted.AddSeconds(15)){
                 Stop-LauncherAutomation
                 $script:autoLaunch=$false
+                $state.Phase='NeedsAttention'
                 if((Get-Variable uiAutoLaunch -ErrorAction SilentlyContinue) -and $uiAutoLaunch){$uiAutoLaunch.IsChecked=$false}
                 Write-Panel 'Launcher did not answer. Continue by selecting the account and Play manually.'
             }
@@ -33,6 +35,7 @@ function Update-LauncherAutomation($Missing,$Launchers){
         $state.AutoJob.Dispose();$state.AutoJob=$null
         if(!$ok){
             $script:autoLaunch=$false
+                $state.Phase='NeedsAttention'
             if((Get-Variable uiAutoLaunch -ErrorAction SilentlyContinue) -and $uiAutoLaunch){$uiAutoLaunch.IsChecked=$false}
             Write-Panel ('Automatic launch paused: '+$errorText)
             return

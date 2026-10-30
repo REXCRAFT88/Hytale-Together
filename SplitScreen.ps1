@@ -1,7 +1,8 @@
 ﻿param(
- [ValidateSet('Open','Prepare','Discover','Attach','Pause','Resume','Stop','Status','Restore','LocalWorlds','Arrange')][string]$Action='Open',
+ [ValidateSet('Open','Prepare','Discover','Attach','Pause','Resume','Stop','Status','Restore','LocalWorlds','Arrange','SwitchBranch')][string]$Action='Open',
  [ValidateSet('Horizontal','Vertical')][string]$Layout='Horizontal',
  [ValidateSet('Windowed','FullScreen')][string]$WindowMode='Windowed',
+ [ValidateSet('release','pre-release')][string]$GameBranch='release',
  [switch]$ManualResize,[int]$MonitorIndex=0
 )
 $ErrorActionPreference='Stop'
@@ -15,12 +16,14 @@ $env:SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS='1'
 . "$PSScriptRoot/modules/Windows.ps1"
 . "$PSScriptRoot/modules/Installation.ps1"
 . "$PSScriptRoot/modules/Launcher.ps1"
+. "$PSScriptRoot/modules/Branches.ps1"
 . "$PSScriptRoot/modules/LocalWorld.ps1"
 if($Action -ne 'Open'){
  try {
   switch($Action){
    Prepare { Write-RoutingConfiguration }
    Discover { Import-RunningAccounts }
+   SwitchBranch { Set-SelectedGameBranch $GameBranch }
    LocalWorlds { Save-LocalWorldEndpoints }
    Attach { Attach-SelectedAccounts; Set-SplitLayout -TargetMonitorIndex $MonitorIndex }
    Arrange { Set-SplitLayout -TargetMonitorIndex $MonitorIndex }
